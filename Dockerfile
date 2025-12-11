@@ -1,13 +1,23 @@
-FROM tomcat:9-jdk17
+# Step 1: Use Maven to build the WAR
+FROM maven:3.8.7-openjdk-17 AS build
 
-# Remove default Tomcat apps
-RUN rm -rf /usr/local/tomcat/webapps/*
+WORKDIR /app
 
-# Copy your WAR file
-COPY target/event.war /usr/local/tomcat/webapps/ROOT.war
+# Copy all project files
+COPY . .
 
-# Expose port 8080
+# Build WAR
+RUN mvn -q -DskipTests package
+
+# Step 2: Tomcat server image
+FROM tomcat:9.0
+
+# Remove default ROOT app
+RUN rm -rf /usr/local/tomcat/webapps/ROOT
+
+# Copy your WAR file into ROOT.war
+COPY --from=build /app/target/event-1.0-SNAPSHOT.war /usr/local/tomcat/webapps/ROOT.war
+
 EXPOSE 8080
 
-# Start Tomcat
 CMD ["catalina.sh", "run"]
