@@ -1,13 +1,12 @@
+//
+//        final String senderEmail = "eventbookmy0@gmail.com"; // Replace with your email
+//        final String senderPassword = "gnsy nrps tjmu wtac"; // Replace with app password
+//
 package com.event;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.Properties;
 import java.util.Random;
 
@@ -19,152 +18,131 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class SendEmailServlet extends HttpServlet {
-	String eventNo ;
-	String eventName;
-	String cardNumber ;
-	String expDate ;
-	String cvv;
-	String holder;
-	String refID;
-	String mail;
-	
-	String eve_NO;
-	String eveName;
-	String fee;
-	String organizer;
-	String venue;
-	String date;
-	
     private static final long serialVersionUID = 1L;
 
     protected void doPost(HttpServletRequest req, HttpServletResponse res)
             throws ServletException, IOException {
-    	eventName = req.getParameter("ename");
-		eventNo = req.getParameter("enum");
-		cardNumber = req.getParameter("cardno");
-		expDate = req.getParameter("edate");
-		cvv = req.getParameter("cvv");
-		mail = req.getParameter("mail");
-		holder = req.getParameter("cname");
-		Random random = new Random();
-		refID = ""+(1000+random.nextInt(9000));
-        // Fetch email details from the HTML form
-       String recipientEmail = mail;//request.getParameter("email"); // Get email from form
-        String subject = "Book My Event"; // Mail subject
-        String messageBody = "This is a test email from eventli.com."; // Mail body
+        String eventNo = req.getParameter("enum");
+        String eventName = req.getParameter("ename");
+        String cardNumber = req.getParameter("cardno");
+        String expDate = req.getParameter("edate");
+        String cvv = req.getParameter("cvv");
+        String mail = req.getParameter("mail");
+        String holder = req.getParameter("cname");
+        String refID = "" + (1000 + new Random().nextInt(9000));
 
-        // Sender email credentials
-        final String senderEmail = "eventbookmy0@gmail.com"; // Replace with your email
-        final String senderPassword = "gnsy nrps tjmu wtac"; // Replace with app password
-        try {
-			upMessage(res);
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-        // SMTP properties
+        // save transaction and fetch event details
+        EventDetails ed = fetchEventAndStoreTransaction(eventNo, eventName, cardNumber, expDate, cvv, holder, refID, mail);
+
+        // send email using SMTP credentials from environment variables
+        String senderEmail = System.getenv("SMTP_USER");
+        String senderPass = System.getenv("SMTP_PASS");
+
+        if (senderEmail == null || senderPass == null) {
+            res.getWriter().println("<h3 style='color:red;'>SMTP credentials not set in environment variables.</h3>");
+            return;
+        }
+
         Properties properties = new Properties();
         properties.put("mail.smtp.auth", "true");
         properties.put("mail.smtp.starttls.enable", "true");
         properties.put("mail.smtp.host", "smtp.gmail.com");
         properties.put("mail.smtp.port", "587");
 
-        // Authenticate and create session
         Session session = Session.getInstance(properties, new Authenticator() {
-            @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(senderEmail, senderPassword);
+                return new PasswordAuthentication(senderEmail, senderPass);
             }
         });
 
         try {
-            // Create a mail message
-        //	Message message = new MimeMessage(session);
-        	Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(senderEmail)); // Sender email
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail)); // Recipient email
-            message.setSubject(subject); // Subject
-            message.setText(messageBody); // Body
+            Message message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(senderEmail));
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(mail));
+            message.setSubject("Evently - Booking Confirmation");
 
             StringBuilder emailContent = new StringBuilder();
-            emailContent.append("<html><body style='background-image: url(\"https://wintertime.com.my/wp-content/uploads/2019/07/event-production-company-p2-entertainment-group-1.jpg\"); background-size: cover; background-position: center;color:white;'>");
-            emailContent.append("<h1>Thank You for Booking in Evently</h1>");
-            emailContent.append("<center><h4>Ticket Details</h4></center><br>");
-            emailContent.append("<center><h4>Event Number = " + eve_NO + "</h4></center><br>");
-            emailContent.append("<center><h4>Event Name = " + eveName + "</h4></center><br>");
-            emailContent.append("<center><h4>Organizer = " + organizer + "</h4></center><br>");
-            emailContent.append("<center><h4>FEES = " + fee + "</h4></center><br>");
-            emailContent.append("<center><h4>Venue = " + venue + "</h4></center><br>");
-            emailContent.append("<center><h4>Date = " + date + "</h4></center><br>");
-            emailContent.append("<center><h4>RefID = " + refID + "</h4></center><br>");
+            emailContent.append("<html><body style='color:#111;background:#fff;padding:20px;'>");
+            emailContent.append("<h1>Thank you for booking in Evently</h1>");
+            emailContent.append("<h3>Ticket Details</h3>");
+            emailContent.append("<p>Event Number: " + ed.eventNumber + "</p>");
+            emailContent.append("<p>Event Name: " + ed.eventName + "</p>");
+            emailContent.append("<p>Organizer: " + ed.organizer + "</p>");
+            emailContent.append("<p>Fees: " + ed.fee + "</p>");
+            emailContent.append("<p>Venue: " + ed.venue + "</p>");
+            emailContent.append("<p>Date: " + ed.eventDate + "</p>");
+            emailContent.append("<p>RefID: " + refID + "</p>");
             emailContent.append("</body></html>");
 
             message.setContent(emailContent.toString(), "text/html");
             Transport.send(message);
 
-            // Send a response to the client
             res.setContentType("text/html");
-          PrintWriter  out = res.getWriter();
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Event Details</title>");
-            out.println("</head>");
-            out.println("<body>");
+            PrintWriter out = res.getWriter();
             out.println("<link rel=\"stylesheet\" href=\"total.css\">");
-            out.println("<div style='text-align: center; margin-top: 20px;'>");
-            res.getWriter().println("<h3>you will receive a mail shortly " + holder + "</h3>");
-            out.println("</div></body> </html>");
+            out.println("<div style='text-align:center;margin-top:20px;'>");
+            out.println("<h3>You will receive a mail shortly, " + holder + "</h3>");
+            out.println("</div>");
+
         } catch (MessagingException e) {
             e.printStackTrace();
-            res.setContentType("text/html");
             res.getWriter().println("<h3>Failed to send email: " + e.getMessage() + "</h3>");
         }
     }
 
-    public void upMessage(HttpServletResponse res) throws SQLException, IOException {
-        String url = "jdbc:mysql://localhost:3306/event";
-        String username = "root";
-        String pass = "Mysql087";
-        String get = "SELECT * FROM events WHERE event_number ='" + eventNo + "';";
-
-      //  System.out.println("SQL Query: " + get); // Debugging query
-        try {
-            // Load the MySQL driver class
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        Connection con = DriverManager.getConnection(url, username, pass);
+    private EventDetails fetchEventAndStoreTransaction(String eventNo, String eventName, String cardNumber, String expDate,
+                                                       String cvv, String holder, String refID, String mail) {
+        EventDetails ed = new EventDetails();
 
         try {
-            PreparedStatement prep = con.prepareStatement(get);
-            ResultSet rs = prep.executeQuery();
-            if (rs.next()) {
-                eve_NO = rs.getString("event_number");
-                eveName = rs.getString("event_name");
-                organizer = rs.getString("organizer");
-                fee = rs.getString("fee");
-                venue = rs.getString("venue");
-                date = rs.getString("event_date");
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException ignored) {}
 
-                // Debugging data retrieved
-            //    System.out.println("Event Details: " + eve_NO + ", " + eveName + ", " + organizer + ", " + fee + ", " + venue + ", " + date);
-            } else {
-                System.out.println("No data found for event number: " + eventNo);
-                PrintWriter out = res.getWriter();
-                out.println("<h1>No Such Event Found</h1>");
+        String url = System.getenv("DB_URL");
+        String user = System.getenv("DB_USER");
+        String pass = System.getenv("DB_PASS");
+
+        String selectSql = "SELECT event_number, event_name, organizer, fee, venue, event_date FROM events WHERE event_number = ?";
+        String insertSql = "INSERT INTO transaction(event_number, event_name, card_number, exp_date, cvv, holder, ref_id, mail) VALUES (?,?,?,?,?,?,?,?)";
+
+        try (Connection con = DriverManager.getConnection(url, user, pass);
+             PreparedStatement sel = con.prepareStatement(selectSql);
+             PreparedStatement ins = con.prepareStatement(insertSql)) {
+
+            sel.setString(1, eventNo);
+            try (ResultSet rs = sel.executeQuery()) {
+                if (rs.next()) {
+                    ed.eventNumber = rs.getString("event_number");
+                    ed.eventName = rs.getString("event_name");
+                    ed.organizer = rs.getString("organizer");
+                    ed.fee = rs.getString("fee");
+                    ed.venue = rs.getString("venue");
+                    ed.eventDate = rs.getString("event_date");
+                }
             }
+
+            ins.setString(1, eventNo);
+            ins.setString(2, eventName);
+            ins.setString(3, cardNumber);
+            ins.setString(4, expDate);
+            ins.setString(5, cvv);
+            ins.setString(6, holder);
+            ins.setString(7, refID);
+            ins.setString(8, mail);
+            ins.executeUpdate();
+
         } catch (SQLException e) {
             e.printStackTrace();
-            PrintWriter out = res.getWriter();
-            out.println("<h1>Error while fetching event details: " + e.getMessage() + "</h1>");
         }
+        return ed;
+    }
 
-        String query = "INSERT INTO transaction VALUES('" + eventName + "','" + eventNo + "','" + cardNumber + "','" + expDate + "','" + cvv + "','" + holder + "','" + refID + "','" + mail + "');";
-        Statement st = con.createStatement();
-        st.executeUpdate(query);
-
-        con.close();
+    private static class EventDetails {
+        String eventNumber = "";
+        String eventName = "";
+        String organizer = "";
+        String fee = "";
+        String venue = "";
+        String eventDate = "";
     }
 }

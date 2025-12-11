@@ -6,82 +6,55 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class TransactionView extends HttpServlet {
+    private static final long serialVersionUID = 1L;
+
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html");
         PrintWriter out = response.getWriter();
 
-        // Include CSS file
-        out.println("<html>");
-        out.println("<head>");
-        out.println("<title>Event Details</title>");
-        out.println("<link rel='stylesheet' href='total.css'>"); // Include your CSS file
-        out.println("</head>");
-        out.println("<body>");
-
-        // Page Title
+        out.println("<html><head><title>Event Bookings</title><link rel='stylesheet' href='total.css'></head><body>");
         out.println("<h1>Event Bookings</h1>");
-
-        // Table structure
-        out.println("<table id='common'>");
-        out.println("<thead>");
-        out.println("<tr>");
-        out.println("<th>Event Name</th>");
-        out.println("<th>Event No</th>");
-        out.println("<th>card No</th>");
-        out.println("<th>ExpDate</th>");
-        out.println("<th>CVV</th>");
-        out.println("<th>Name</th>");
-        out.println("<th>RefID</th>");
-        out.println("</tr>");
-        out.println("</thead>");
-        out.println("<tbody>");
+        out.println("<table id='common'><thead><tr>"
+                + "<th>Event Name</th><th>Event No</th><th>Card No</th><th>ExpDate</th><th>CVV</th><th>Name</th><th>RefID</th>"
+                + "</tr></thead><tbody>");
 
         try {
-            // Database connection
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/event", "root", "Mysql087");
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException ignored) {}
 
-            // Query to fetch data
-            Statement stmt = con.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT event_name, event_no,cardno,expdate,cvv_no,name,refID FROM transaction");
+        String url = System.getenv("DB_URL");
+        String user = System.getenv("DB_USER");
+        String pass = System.getenv("DB_PASS");
 
-            // Populate table rows with data
+        String sql = "SELECT event_name, event_number, card_number, exp_date, cvv, holder, ref_id FROM transaction ORDER BY ref_id";
+
+        try (Connection con = DriverManager.getConnection(url, user, pass);
+             Statement st = con.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
             while (rs.next()) {
                 out.println("<tr>");
                 out.println("<td>" + rs.getString("event_name") + "</td>");
-                out.println("<td>" + rs.getString("event_no") + "</td>");
-                out.println("<td>" + rs.getString("cardno") + "</td>");
-                out.println("<td>" + rs.getString("expdate") + "</td>");
-                out.println("<td>" + rs.getString("cvv_no") + "</td>");
-                out.println("<td>" + rs.getString("name") + "</td>");
-                out.println("<td>" + rs.getString("refID") + "</td>");
+                out.println("<td>" + rs.getString("event_number") + "</td>");
+                out.println("<td>" + rs.getString("card_number") + "</td>");
+                out.println("<td>" + rs.getString("exp_date") + "</td>");
+                out.println("<td>" + rs.getString("cvv") + "</td>");
+                out.println("<td>" + rs.getString("holder") + "</td>");
+                out.println("<td>" + rs.getString("ref_id") + "</td>");
                 out.println("</tr>");
             }
-
-            // Close connection
-            con.close();
         } catch (Exception e) {
-            out.println("<tr><td colspan='6' style='color: red;'>Error fetching data: " + e.getMessage() + "</td></tr>");
+            out.println("<tr><td colspan='7' style='color: red;'>Error fetching data: " + e.getMessage() + "</td></tr>");
         }
 
-        out.println("</tbody>");
-        out.println("</table>");
-
-        // Booking button
-//        out.println("<div style='text-align: center; margin-top: 20px;'>");
-//        out.println("<a href='Registration.html'>");
-//        out.println("<button id='sub'>Go to Booking</button>");
-//        out.println("</a>");
-//        out.println("</div>");
-
-        out.println("</body>");
-        out.println("</html>");
+        out.println("</tbody></table></body></html>");
     }
 }
