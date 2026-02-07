@@ -1,6 +1,6 @@
 //
 //        final String senderEmail = "eventbookmy0@gmail.com"; // Replace with your email
-//        final String senderPassword = "gnsy nrps tjmu wtac"; // Replace with app password
+//        final String senderPassword = "gnsy nrps tjmu wtad"; // Replace with app password
 //
 package com.event;
 
@@ -103,7 +103,7 @@ public class SendEmailServlet extends HttpServlet {
         String pass = System.getenv("DB_PASS");
 
         String selectSql = "SELECT event_number, event_name, organizer, fee, venue, event_date FROM events WHERE event_number = ?";
-        String insertSql = "INSERT INTO transaction(event_number, event_name, card_number, exp_date, cvv, holder, ref_id, mail) VALUES (?,?,?,?,?,?,?,?)";
+        String insertSql = "INSERT INTO transactions(event_number, event_name, card_number, exp_date, cvv, holder, ref_id, mail) VALUES (?,?,?,?,?,?,?,?)";
 
         try (Connection con = DriverManager.getConnection(url, user, pass);
              PreparedStatement sel = con.prepareStatement(selectSql);
