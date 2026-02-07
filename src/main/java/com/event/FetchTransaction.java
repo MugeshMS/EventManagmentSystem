@@ -45,7 +45,7 @@ public class FetchTransaction extends HttpServlet {
         String pass = System.getenv("DB_PASS");
 
         // specify column list to avoid issues
-        String sql = "INSERT INTO transaction(event_number, event_name, card_number, exp_date, cvv, holder, ref_id, mail) VALUES (?,?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO transactions(event_number, event_name, card_number, exp_date, cvv, holder, ref_id, mail) VALUES (?,?,?,?,?,?,?,?)";
 
         try (Connection con = DriverManager.getConnection(url, user, pass);
              PreparedStatement pst = con.prepareStatement(sql)) {
