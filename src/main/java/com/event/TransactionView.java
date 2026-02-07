@@ -34,7 +34,7 @@ public class TransactionView extends HttpServlet {
         String user = System.getenv("DB_USER");
         String pass = System.getenv("DB_PASS");
 
-        String sql = "SELECT event_name, event_number, card_number, exp_date, cvv, holder, ref_id FROM transaction ORDER BY ref_id";
+        String sql = "SELECT event_name, event_number, card_number, exp_date, cvv, holder, ref_id FROM transactions ORDER BY ref_id";
 
         try (Connection con = DriverManager.getConnection(url, user, pass);
              Statement st = con.createStatement();
