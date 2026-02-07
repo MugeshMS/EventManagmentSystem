@@ -10,7 +10,7 @@ COPY . .
 RUN mvn -q -DskipTests package
 
 # Step 2: Run on Tomcat
-FROM tomcat:9.0
+FROM tomcat:9.0-jdk17-temurin
 
 # Remove default ROOT application
 RUN rm -rf /usr/local/tomcat/webapps/ROOT
